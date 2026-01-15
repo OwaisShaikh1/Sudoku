@@ -1,0 +1,89 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.app {
+  text-align: center;
+  padding: 2rem;
+}
+
+h1 {
+  margin-bottom: 2rem;
+  color: #333;
+  font-size: 2.5rem;
+}
+
+.sudoku-board {
+  display: inline-grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 0;
+  border: 3px solid #333;
+  background-color: #fff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.sudoku-row {
+  display: contents;
+}
+
+.sudoku-cell {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.sudoku-cell:hover {
+  background-color: #f0f0f0;
+}
+
+/* Thicker borders for 3x3 boxes */
+.sudoku-cell[data-row="2"],
+.sudoku-cell[data-row="5"] {
+  border-bottom: 2px solid #333;
+}
+
+.sudoku-cell[data-col="2"],
+.sudoku-cell[data-col="5"] {
+  border-right: 2px solid #333;
+}
+
+/* Given cells (pre-filled) styling - to be added later */
+.sudoku-cell.given {
+  background-color: #e8f4f8;
+  font-weight: 700;
+  color: #000;
+}
+
+.sudoku-cell.invalid {
+  background-color: #ffe6e6;
+  color: #d32f2f;
+}
+
+.sudoku-cell:focus {
+  outline: none;
+  background-color: #bbdefb;
+  box-shadow: inset 0 0 0 2px #2196f3;
+}
