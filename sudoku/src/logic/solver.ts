@@ -36,14 +36,19 @@ export function isValid(board: Board, row: number, col: number, value: number): 
 export async function solveBoard(board: Board): Promise<boolean> {
   const empty = findEmpty(board);
   if (!empty) return true;
+
   const [row, col] = empty;
+
   for (let num = 1; num <= 9; num++) {
     if (isValid(board, row, col, num)) {
       board[row][col] = num;
-      await sleep(1000);
+
+      // Add a delay for debugging purposes
+      //await sleep(1000);
+
       if (await solveBoard(board)) return true;
-      board[row][col] = null;
-      await sleep(1000);
+
+      board[row][col] = null; // Backtrack: set to null (empty cell)
     }
   }
   return false;
