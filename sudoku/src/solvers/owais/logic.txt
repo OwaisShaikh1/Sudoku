@@ -1,0 +1,7 @@
+For num = 1 to 9
+  Find all places num already exists
+  For each row / col / box
+    Find candidate cells for num
+    If exactly one candidate
+      Place num there
+Repeat until no changes

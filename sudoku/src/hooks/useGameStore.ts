@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Board } from '../types';
+import type { Board } from '../types';
 
 /**
  * Create an empty 9x9 board.

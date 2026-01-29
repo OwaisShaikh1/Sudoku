@@ -1,4 +1,4 @@
-import { Board } from '../types';
+import type { Board } from '../types';
 
 /**
  * Check whether placing `value` at (row,col) is valid according to Sudoku rules.

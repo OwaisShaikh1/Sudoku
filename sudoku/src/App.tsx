@@ -5,6 +5,8 @@ import './TreeVisualization.css';
 import { Board as BoardComponent } from './components/Board';
 import type { Board } from './types';
 import { findEmpty, isValid } from './logic/solver';
+import { solvers } from './solvers';
+import { setOwaisConfig } from './solvers/owais/config';
 
 function createEmptyBoard(): Board {
   return Array.from({ length: 9 }, () => Array(9).fill(null));
@@ -201,6 +203,12 @@ export default function App() {
   const [tree, setTree] = useState<any>({ children: [] });
   const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
   const [speed, setSpeed] = useState(50); // 0 = fastest, 100 = slowest
+  const [selectedSolverIndex, setSelectedSolverIndex] = useState(0);
+  const [visualize, setVisualize] = useState(false);
+  const [showCandidates, setShowCandidates] = useState(true);
+  const [usePointingPairs, setUsePointingPairs] = useState(false);
+  const [useNakedPairs, setUseNakedPairs] = useState(false);
+  const [useHiddenPairs, setUseHiddenPairs] = useState(false);
   const treeRef = useRef<any>({ children: [] });
   const lastTreeUpdateRef = useRef<number>(0);
   const speedRef = useRef(50); // Ref to access current speed in async function
@@ -209,6 +217,19 @@ export default function App() {
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
+
+  // Reset visualize when solver changes to non-backtracking
+  useEffect(() => {
+    if (solvers[selectedSolverIndex].name !== 'Backtracking') {
+      setVisualize(false);
+    }
+  }, [selectedSolverIndex]);
+
+  // Update Owais solver config when strategy toggles change
+  useEffect(() => {
+    setOwaisConfig({ usePointingPairs, useNakedPairs, useHiddenPairs });
+  }, [usePointingPairs, useNakedPairs, useHiddenPairs]);
+
   const pendingUpdateRef = useRef<boolean>(false);
 
   // Throttled helper to sync tree ref to state for rendering
@@ -322,14 +343,29 @@ export default function App() {
     setStatus(null);
     setCurrentNodeId(null);
     const boardCopy: Board = board.map(row => row.slice());
-    treeRef.current = { children: [] };
-    updateTreeState(true); // Force initial update
-    const getDelay = () => speedRef.current; // Get current speed from ref
-    const solved = await solveBoardWithUpdates(boardCopy, setBoard, () => paused, getDelay, setMoveCount, treeRef.current, updateTreeState, 'root');
-    setBoard(boardCopy.map(r => r.slice())); // Ensure UI reflects final state
-    updateTreeState(true); // Force final update to ensure tree is synced
-    setCurrentNodeId(null);
-    if (!solved) setStatus('No solution found');
+    const selectedSolver = solvers[selectedSolverIndex];
+
+    if (selectedSolver.name === 'Backtracking' && visualize) {
+      // Use visualization for backtracking solver
+      treeRef.current = { children: [] };
+      updateTreeState(true); // Force initial update
+      const getDelay = () => speedRef.current; // Get current speed from ref
+      const solved = await solveBoardWithUpdates(boardCopy, setBoard, () => paused, getDelay, setMoveCount, treeRef.current, updateTreeState, 'root');
+      setBoard(boardCopy.map(r => r.slice())); // Ensure UI reflects final state
+      updateTreeState(true); // Force final update to ensure tree is synced
+      setCurrentNodeId(null);
+      if (!solved) setStatus('No solution found');
+    } else {
+      // Use selected solver without visualization
+      setMoveCount(0);
+      const result = await selectedSolver.solve(boardCopy);
+      if (result) {
+        setBoard(result);
+        setStatus('Solved!');
+      } else {
+        setStatus('No solution found');
+      }
+    }
     setSolving(false);
     setPaused(false);
   }
@@ -408,6 +444,173 @@ export default function App() {
             <span>Slow</span>
           </div>
         </div>
+        <div style={{ 
+          marginBottom: '1.2rem', 
+          padding: '0.75rem 1rem',
+          background: '#f5f5f5',
+          borderRadius: '4px',
+          border: '1px solid #ddd',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '0.5rem'
+          }}>
+            <span style={{ fontWeight: '600', fontSize: '0.95rem' }}>Solver</span>
+          </div>
+          <select
+            value={selectedSolverIndex}
+            onChange={(e) => setSelectedSolverIndex(Number(e.target.value))}
+            style={{ 
+              width: '100%',
+              padding: '0.5rem',
+              fontSize: '0.9rem',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              background: 'white'
+            }}
+          >
+            {solvers.map((solver, index) => (
+              <option key={index} value={index}>
+                {solver.name}
+              </option>
+            ))}
+          </select>
+          {solvers[selectedSolverIndex].timeComplexity && (
+            <div style={{ 
+              marginTop: '0.75rem',
+              padding: '0.6rem',
+              background: '#fff',
+              borderRadius: '4px',
+              fontSize: '0.82rem',
+              color: '#555'
+            }}>
+              <div style={{ marginBottom: '0.3rem' }}>
+                <strong>Time:</strong> {solvers[selectedSolverIndex].timeComplexity}
+              </div>
+              <div style={{ marginBottom: '0.3rem' }}>
+                <strong>Space:</strong> {solvers[selectedSolverIndex].spaceComplexity}
+              </div>
+              {solvers[selectedSolverIndex].description && (
+                <div style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#777', lineHeight: '1.4' }}>
+                  {solvers[selectedSolverIndex].description}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        {solvers[selectedSolverIndex].name === 'Backtracking' && (
+          <div style={{ 
+            marginBottom: '1.2rem', 
+            padding: '0.75rem 1rem',
+            background: '#f5f5f5',
+            borderRadius: '4px',
+            border: '1px solid #ddd',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              fontSize: '0.9rem',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="checkbox"
+                checked={visualize}
+                onChange={(e) => setVisualize(e.target.checked)}
+                style={{ marginRight: '0.5rem' }}
+              />
+              Show Visualization
+            </label>
+          </div>
+        )}
+        <div style={{ 
+          marginBottom: '1.2rem', 
+          padding: '0.75rem 1rem',
+          background: '#f5f5f5',
+          borderRadius: '4px',
+          border: '1px solid #ddd',
+          width: '100%',
+          boxSizing: 'border-box'
+        }}>
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            fontSize: '0.9rem',
+            cursor: 'pointer'
+          }}>
+            <input
+              type="checkbox"
+              checked={showCandidates}
+              onChange={(e) => setShowCandidates(e.target.checked)}
+              style={{ marginRight: '0.5rem' }}
+            />
+            Show Candidate Notes
+          </label>
+        </div>
+        {solvers[selectedSolverIndex].name === 'Owais Logic' && (
+          <div style={{ 
+            marginBottom: '1.2rem', 
+            padding: '0.75rem 1rem',
+            background: '#f5f5f5',
+            borderRadius: '4px',
+            border: '1px solid #ddd',
+            width: '100%',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ fontWeight: '600', fontSize: '0.95rem', marginBottom: '0.6rem' }}>
+              Advanced Strategies
+            </div>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              marginBottom: '0.5rem'
+            }}>
+              <input
+                type="checkbox"
+                checked={usePointingPairs}
+                onChange={(e) => setUsePointingPairs(e.target.checked)}
+                style={{ marginRight: '0.5rem' }}
+              />
+              Pointing Pairs Strategy
+            </label>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              marginBottom: '0.5rem'
+            }}>
+              <input
+                type="checkbox"
+                checked={useNakedPairs}
+                onChange={(e) => setUseNakedPairs(e.target.checked)}
+                style={{ marginRight: '0.5rem' }}
+              />
+              Naked Pairs Strategy
+            </label>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              fontSize: '0.9rem',
+              cursor: 'pointer'
+            }}>
+              <input
+                type="checkbox"
+                checked={useHiddenPairs}
+                onChange={(e) => setUseHiddenPairs(e.target.checked)}
+                style={{ marginRight: '0.5rem' }}
+              />
+              Hidden Pairs Strategy
+            </label>
+          </div>
+        )}
         {status && <div style={{ 
           color: '#c00', 
           marginBottom: '1rem',
@@ -467,7 +670,7 @@ export default function App() {
             Load Puzzle
           </button>
         </div>
-        <BoardComponent board={board} onCellChange={solving ? undefined : handleCellChange} />
+        <BoardComponent board={board} onCellChange={solving ? undefined : handleCellChange} showCandidates={showCandidates} usePointingPairs={usePointingPairs} useNakedPairs={useNakedPairs} useHiddenPairs={useHiddenPairs} />
         <div style={{ 
           marginTop: '1.5rem',
           display: 'flex',
